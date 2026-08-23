@@ -1,0 +1,36 @@
+schema_version: 1
+
+name: motor_start
+description: "启动电机并在 5s 内确认转速稳定超过 1000 rpm"
+
+device: stm32_motor
+timeout: 60s
+retry: 1
+on_failure: abort
+
+steps:
+  - action: reset
+
+  - action: send
+    params:
+      channel: uart0
+      data: "start\n"
+      expect: "^OK"
+
+  - action: wait
+    params:
+      duration: 2s
+
+  - action: assert
+    params:
+      metric: rpm
+      op: gt
+      value: 1000
+      within: 5s
+      settle: 200ms
+
+  - action: capture
+    params:
+      source: uart0
+      duration: 1s
+      artifact: uart_log

@@ -1,0 +1,55 @@
+schema_version: 1
+
+id: stm32_motor
+name: "电机控制板 rev.B"
+description: >
+  无刷电机控制器。UART0 接收 ASCII 行命令（start / stop，回复 OK ...）。
+  telemetry 每 100ms 一行 JSON，含 rpm 与绕组温度。flash 需 ST-Link。
+
+vendor: xxx
+model: STM32F407VG
+serial_number: "CN4821234"
+
+match:
+  adapter: mock          # MockAdapter：无硬件跑全链路（Phase 0 演示用）
+  usb_vid: "0483"
+  usb_pid: "374B"
+  serial_number: "CN4821234"
+
+identity_check:
+  chip_id: "dev:066CFF3035"
+
+capabilities:
+  - capability: core.firmware
+    version: "^1.0.0"
+    binding:
+      tool: stm32cubeprogrammer
+      probe: ST-LINK-V3
+  - capability: core.link
+    version: "^1.0.0"
+    binding:
+      channel: uart0
+      baudrate: 115200
+  - capability: core.telemetry
+    version: "^1.0.0"
+    binding:
+      source: uart0
+      format: line_json
+
+telemetry:
+  format: line_json
+  fields:
+    rpm:
+      type: uint16
+      scale: 1
+      unit: rpm
+      range: [0, 60000]
+    temp_c:
+      type: float32
+      scale: 0.1
+      unit: degC
+      range: [-40, 150]
+
+safety:
+  class: high_power
+  notes: "电机运行时禁止 flash / power_cycle。"

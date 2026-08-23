@@ -1,0 +1,33 @@
+[project]
+name = "hardware-harness"
+version = "0.1.0"
+description = "A hardware execution runtime for AI coding agents"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "pyyaml>=6",
+    "jsonschema>=4",
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+# STM32 烧录/调试支持（较重，按需安装）：pip install 'hardware-harness[stm32]'
+stm32 = ["pyocd>=0.36"]
+# AI Agent 接入（MCP server）：pip install 'hardware-harness[agent]'
+# 注意锁 <2：mcp 2.0 重构了 API（FastMCP 位置未定），1.x 是全生态稳定线
+agent = ["mcp>=1.20,<2"]
+
+[project.scripts]
+harness = "harness.cli:app"
+harness-mcp = "harness.mcp_server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+harness = ["py.typed"]

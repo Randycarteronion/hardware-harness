@@ -1,0 +1,59 @@
+# 本机实测设备：ESP32-S3 开发板（CH343 USB 转串口）
+# 所有身份字段都来自 2026-08-23 的真实枚举：
+#   harness discover  -> COM6, vid=1a86 pid=55d3, sn=5B91001796 (CH343)
+#   esptool read_mac  -> 68:EE:8F:4F:03:B4
+
+schema_version: 1
+
+id: esp32s3_dev
+name: "ESP32-S3 开发板"
+description: >
+  ESP32-S3 N16R8（QFN56，双核 240MHz，16MB flash，8MB PSRAM，Wi-Fi+BLE5）。
+  CH343 USB 转串口在 COM6，115200 8N1。复位走 RTS 脉冲；
+  烧录走 ROM 下载模式（esptool 自动 DTR/RTS 序列）。
+  原厂固件是 esp32-cam-webserver（N16R8 配置），因 PSRAM 初始化
+  失败在启动即 Halting，属不可用状态。
+
+vendor: Espressif
+model: ESP32-S3 N16R8 QFN56 rev v0.2
+
+match:
+  adapter: esp32
+  serial_number: "5B91001796"    # CH343 桥接芯片的 USB 序列号 —— 精确到这根线这块板
+
+identity_check:
+  mac: "68:EE:8F:4F:03:B4"      # 烧录前 esptool read_mac 核验，防插错板
+
+capabilities:
+  - capability: core.firmware
+    binding:
+      tool: esptool
+      chip: esp32s3
+      flash_baud: 921600        # CH343 支持高波特率；不稳就降到 460800
+      offset: "0x0"
+  - capability: core.link
+    binding:
+      baudrate: 115200
+      reset_line: rts           # ESP32 自动复位电路：RTS 接 EN
+      boot_time: 1s             # 【经验】复位后等 1s 再发命令：ROM 引导+MicroPython 启动需要时间，早发会丢
+  - capability: core.telemetry
+    binding:
+      source: uart0
+      format: line_json
+
+telemetry:
+  format: line_json
+  fields:
+    rpm:
+      type: uint16
+      unit: rpm
+      range: [0, 60000]
+    temp_c:
+      type: float32
+      scale: 0.1
+      unit: degC
+      range: [-40, 150]
+
+safety:
+  class: powered_device
+  notes: "烧录会覆盖 flash 中现有程序（当前是摄像头例程）。"

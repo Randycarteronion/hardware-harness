@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hardware-harness.dev/schemas/test.schema.json",
+  "title": "Test Script",
+  "description": "Deterministic, replayable hardware test. Exactly 7 step primitives; no scripting language, no branching. Logic belongs to the agent, not the runner.",
+  "type": "object",
+  "required": ["schema_version", "name", "device", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "description": { "type": "string" },
+    "device": { "type": "string", "description": "Reference to a device definition id." },
+    "timeout": { "$ref": "#/$defs/duration", "default": "60s" },
+    "retry": { "type": "integer", "minimum": 0, "default": 0, "description": "Whole-script retries after failure." },
+    "on_failure": { "enum": ["abort", "continue"], "default": "abort" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "oneOf": [
+        { "$ref": "#/$defs/step_reset" },
+        { "$ref": "#/$defs/step_power_cycle" },
+        { "$ref": "#/$defs/step_send" },
+        { "$ref": "#/$defs/step_wait" },
+        { "$ref": "#/$defs/step_assert" },
+        { "$ref": "#/$defs/step_capture" },
+        { "$ref": "#/$defs/step_run" }
+      ] }
+    }
+  },
+  "$defs": {
+    "duration": { "type": "string", "pattern": "^\\d+(\\.\\d+)?(ms|s|min)$" },
+    "step_reset": {
+      "type": "object", "required": ["action"], "additionalProperties": false,
+      "properties": { "action": { "const": "reset" } }
+    },
+    "step_power_cycle": {
+      "type": "object", "required": ["action"], "additionalProperties": false,
+      "properties": { "action": { "const": "power_cycle" }, "params": { "$ref": "#/$defs/power_params" } }
+    },
+    "power_params": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "off": { "$ref": "#/$defs/duration", "default": "1s" } }
+    },
+    "step_send": {
+      "type": "object", "required": ["action", "params"], "additionalProperties": false,
+      "properties": {
+        "action": { "const": "send" },
+        "params": {
+          "type": "object", "required": ["channel", "data"], "additionalProperties": false,
+          "properties": {
+            "channel": { "type": "string" },
+            "data": { "type": "string" },
+            "expect": { "type": "string", "description": "Optional regex the reply must match." },
+            "expect_within": { "$ref": "#/$defs/duration", "default": "2s" }
+          }
+        }
+      }
+    },
+    "step_wait": {
+      "type": "object", "required": ["action", "params"], "additionalProperties": false,
+      "properties": {
+        "action": { "const": "wait" },
+        "params": {
+          "type": "object", "required": ["duration"], "additionalProperties": false,
+          "properties": { "duration": { "$ref": "#/$defs/duration" } }
+        }
+      }
+    },
+    "step_assert": {
+      "type": "object", "required": ["action", "params"], "additionalProperties": false,
+      "properties": {
+        "action": { "const": "assert" },
+        "params": {
+          "type": "object",
+          "required": ["metric", "op", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "metric": { "type": "string", "description": "Telemetry field name." },
+            "op": { "enum": ["eq", "ne", "gt", "ge", "lt", "le", "in_range", "contains"] },
+            "value": {},
+            "within": { "$ref": "#/$defs/duration", "default": "0s", "description": "Time window in which the condition must become true. Hardware is inertial; instant sampling causes false failures." },
+            "settle": { "$ref": "#/$defs/duration", "default": "0s", "description": "Condition must hold stably for this long inside the window." }
+          }
+        }
+      }
+    },
+    "step_capture": {
+      "type": "object", "required": ["action", "params"], "additionalProperties": false,
+      "properties": {
+        "action": { "const": "capture" },
+        "params": {
+          "type": "object", "required": ["source", "duration"], "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "description": "Channel id, e.g. uart0." },
+            "duration": { "$ref": "#/$defs/duration" },
+            "artifact": { "type": "string", "default": "capture", "description": "Artifact name; stored under the run directory." }
+          }
+        }
+      }
+    },
+    "step_run": {
+      "type": "object", "required": ["action", "params"], "additionalProperties": false,
+      "properties": {
+        "action": { "const": "run" },
+        "params": {
+          "type": "object", "required": ["test"], "additionalProperties": false,
+          "properties": { "test": { "type": "string", "description": "Nested test script name (file stem)." } }
+        }
+      }
+    }
+  }
+}

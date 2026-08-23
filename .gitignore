@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
+# 运行产物（报告按 run_id 归档，不进版本库）
+runs/
+last_report.json
+
+# 构建产物（源码进库，bin 不进）
+firmware/**/fw.bin
+firmware/**/fw.axf
+firmware/**/*.o
+firmware/**/dump64.bin
+
+# 本地工具链缓存（arduino-cli 等大文件）
+tools/
+
+# 系统杂物
+.DS_Store
+Thumbs.db

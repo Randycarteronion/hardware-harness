@@ -1,0 +1,57 @@
+# 真实 STM32 设备定义示例（NUCLEO / 自制板通用模板）
+#
+# 使用前做两件事：
+#   1. 跑 `harness discover`，把探针序列号填到 probe_serial，
+#      串口序列号（如有）填到 match.serial_number
+#   2. 按你固件实际输出的遥测改 telemetry.fields
+# 固件侧引入 firmware/harness_firmware_stub.h 即可输出合规遥测。
+
+schema_version: 1
+
+id: stm32_nucleo
+name: "NUCLEO 开发板"
+description: >
+  STM32 评估板。ST-Link 探针负责烧录与复位；板载 USB 虚拟串口
+  （115200 8N1）接收 ASCII 行命令（start/stop），并每 100ms 输出
+  一行 JSON 遥测（rpm、temp_c）。
+
+vendor: ST
+model: STM32F103RB
+
+match:
+  adapter: stm32          # 组合适配器：探针 + 串口
+  serial_number: "066BFF383333333232352435"   # USB 序列号（discover 查到后填）
+
+identity_check:
+  chip_id: "066BFF383333333232352435"          # 烧录前核验：必须是这颗探针/板子
+
+capabilities:
+  - capability: core.firmware
+    binding:
+      tool: pyocd
+      probe_serial: "066BFF383333333232352435" # ST-Link 唯一 ID（discover 查到后填）
+  - capability: core.link
+    binding:
+      baudrate: 115200
+      reset_line: rts                          # 复位线接法：rts 或 dtr
+  - capability: core.telemetry
+    binding:
+      source: uart0
+      format: line_json
+
+telemetry:
+  format: line_json
+  fields:
+    rpm:
+      type: uint16
+      unit: rpm
+      range: [0, 60000]
+    temp_c:
+      type: float32
+      scale: 0.1        # 固件发 temp*10 定点数（如 372），Agent 看到 37.2 degC
+      unit: degC
+      range: [-40, 150]
+
+safety:
+  class: powered_device
+  notes: "烧录前确认电机电源已断。"

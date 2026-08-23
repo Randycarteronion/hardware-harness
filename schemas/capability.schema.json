@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hardware-harness.dev/schemas/capability.schema.json",
+  "title": "Capability Spec",
+  "description": "A versioned contract between Harness core and adapters. Devices reference these by name+version; adapters declare which specs they implement.",
+  "type": "object",
+  "required": ["schema_version", "name", "version", "description", "actions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": {
+      "type": "string",
+      "pattern": "^(core|vendor\\.[a-z][a-z0-9_]*)\\.[a-z][a-z0-9_]*$",
+      "description": "Namespaced capability id. core.* is reserved for the built-in registry; vendor.* requires a spec file."
+    },
+    "version": { "$ref": "#/$defs/semver" },
+    "description": {
+      "type": "string",
+      "description": "Human/LLM-readable contract semantics. Returned by hardware.get_info()."
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/action" }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "risk": {
+      "enum": ["read-only", "safe", "destructive"],
+      "description": "read-only: no device state change. safe: reversible change. destructive: firmware/power/state loss, requires confirmation."
+    },
+    "action": {
+      "type": "object",
+      "required": ["name", "risk"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "description": { "type": "string" },
+        "params": { "type": "object", "description": "JSON Schema for action parameters." },
+        "result": { "type": "object", "description": "JSON Schema for action result." },
+        "risk": { "$ref": "#/$defs/risk" },
+        "requires": {
+          "type": "array",
+          "items": { "enum": ["connected"] },
+          "description": "Device state preconditions."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+schema_version: 1
+
+name: esp32_motor_start
+description: "真板验收：虚拟电机启动，5s 内转速稳定超 1000 rpm（ESP32-S3）"
+
+device: esp32s3_dev
+timeout: 60s
+retry: 0
+on_failure: abort
+
+steps:
+  - action: reset          # 复位后自动等待 boot_time（设备 yaml 声明），无需手工 wait
+
+  - action: send
+    params:
+      channel: uart0
+      data: "start\n"
+      expect: "^OK"        # READY 行不匹配，等到真正的 OK motor started
+
+  - action: wait
+    params:
+      duration: 2s
+
+  - action: assert
+    params:
+      metric: rpm
+      op: gt
+      value: 1000
+      within: 5s
+      settle: 200ms
+
+  - action: capture
+    params:
+      source: uart0
+      duration: 1s
+      artifact: uart_log

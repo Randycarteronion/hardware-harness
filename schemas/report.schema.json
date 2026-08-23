@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hardware-harness.dev/schemas/report.schema.json",
+  "title": "Test Report",
+  "description": "Structured result consumed primarily by AI agents. Every assert carries measured values with units; failures carry recent UART context.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "test", "device", "status", "started_at", "duration_ms", "steps", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string" },
+    "test": { "type": "string" },
+    "device": { "type": "string" },
+    "status": { "enum": ["PASS", "FAIL", "ERROR", "TIMEOUT"] },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "hint": { "type": "string", "description": "Actionable self-repair guidance for the agent." },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "duration_ms": { "type": "number" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "action", "status", "duration_ms"],
+        "additionalProperties": true,
+        "properties": {
+          "index": { "type": "integer" },
+          "action": { "type": "string" },
+          "status": { "enum": ["PASS", "FAIL", "ERROR", "SKIP"] },
+          "duration_ms": { "type": "number" },
+          "detail": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "e.g. assert: {metric, op, expected, measured, unit, samples}."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Final telemetry snapshot at end of run, with units embedded in the step details."
+    },
+    "context": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Last N lines of device output before a failure (raw evidence)."
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "mime_type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "mime_type": { "type": "string" },
+          "bytes": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

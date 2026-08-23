@@ -1,0 +1,9 @@
+# Harness Agent 大脑配置（详见 docs/模型接入.md）
+[agent]
+provider = "local"              # local | deepseek
+model = "qwen3-8b"
+# 切 DeepSeek API 时：
+#   provider = "deepseek"
+#   base_url = "https://api.deepseek.com"
+#   并设置环境变量 DEEPSEEK_API_KEY（key 不落盘）
+llama_ngl = 0                   # 本机 4GB 显存实测只能纯 CPU（L23）

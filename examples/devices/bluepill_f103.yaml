@@ -1,0 +1,60 @@
+# 本机实测设备：蓝pill（STM32F103C8T6）+ 山寨 ST-Link V2（老固件）
+# 身份字段来自 2026-08-23 真实枚举：
+#   ST-LINK_CLI -c SWD -> Device ID:0x410, flash 64KB, family STM32F10x Medium-density
+#   pyocd list       -> 探针序列号 220019000A00004D5451514E（固件 V2J16M4，pyocd 拒连）
+
+schema_version: 1
+
+id: bluepill_f103
+name: "蓝pill STM32F103C8"
+description: >
+  STM32F103C8T6 最小系统板（64KB flash / 20KB RAM）。SWD 由山寨
+  ST-Link V2 接入（老固件 V2J16M4，走 ST-LINK_CLI 烧录通道）。
+  USART1 = PA9(TX)/PA10(RX)，115200 8N1 —— 需外接 USB-TTL 模块
+  才有串口通道（板载 USB 未用）。PC13 板载 LED 做心跳指示。
+
+vendor: STMicroelectronics
+model: STM32F103C8T6
+
+match:
+  adapter: stm32
+
+identity_check:
+  device_id: "0x410"     # F103 中容量家族 ID —— stlink_cli 路径的核验依据
+  flash_kb: "64"         # C8 = 64KB（防拿成 CB 128KB 的板子）
+
+capabilities:
+  - capability: core.firmware
+    binding:
+      tool: stlink_cli   # 【经验 L12】老固件山寨 ST-Link：pyocd 拒连，ST-LINK_CLI 兼容
+      offset: "0x08000000"
+      # 【B2】构建声明：Agent 可以自己 build -> flash -> run-test 全闭环
+      build:
+        command: "bash firmware/stm32/f103_motor_demo/build.sh"
+        artifact: "firmware/stm32/f103_motor_demo/fw.bin"
+  - capability: core.link
+    binding:
+      baudrate: 115200
+      reset_line: rts    # USB-TTL 的 RTS 接 NRST 可实现串口复位（未接则依赖探针复位）
+      boot_time: 100ms   # 裸机固件启动极快
+  - capability: core.telemetry
+    binding:
+      source: uart0
+      format: line_json
+
+telemetry:
+  format: line_json
+  fields:
+    rpm:
+      type: uint16
+      unit: rpm
+      range: [0, 60000]
+    temp_c:
+      type: float32
+      scale: 0.1
+      unit: degC
+      range: [-40, 150]
+
+safety:
+  class: powered_device
+  notes: "烧录会覆盖 flash 中现有程序。板上 PC13 LED 每 500ms 闪烁 = 演示固件在跑。"

@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hardware-harness.dev/schemas/device.schema.json",
+  "title": "Device Definition",
+  "description": "A device is identity + discovery binding + capability bindings + telemetry fields + safety metadata. Device type is NOT modeled; vendor/model are pure metadata.",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "description", "match", "capabilities", "telemetry"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Project-unique handle used by agents and tests. Stable across hardware swaps."
+    },
+    "name": { "type": "string" },
+    "description": {
+      "type": "string",
+      "description": "Mandatory LLM-readable summary of the device's behavior and interfaces."
+    },
+    "vendor": { "type": "string" },
+    "model": { "type": "string" },
+    "serial_number": { "type": "string" },
+    "match": {
+      "type": "object",
+      "required": ["adapter"],
+      "additionalProperties": true,
+      "properties": {
+        "adapter": { "type": "string", "description": "Which adapter owns discovery/transport for this device." },
+        "usb_vid": { "type": "string" },
+        "usb_pid": { "type": "string" },
+        "serial_number": { "type": "string", "description": "Strong physical identity; if set, discovery requires an exact match." }
+      }
+    },
+    "identity_check": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Fields (e.g. chip_id) verified against the physical device before any destructive action. Mismatch is a hard failure."
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["capability", "binding"],
+        "additionalProperties": false,
+        "properties": {
+          "capability": { "type": "string", "description": "Reference to a capability spec name." },
+          "version": {
+            "type": "string",
+            "pattern": "^(\\^)?\\d+\\.\\d+\\.\\d+$",
+            "default": "^1.0.0",
+            "description": "Compatible spec range (caret semantics)."
+          },
+          "binding": {
+            "type": "object",
+            "description": "Adapter-private hints on how this device implements the capability (tool, probe, channel, format...)."
+          }
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "required": ["format", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["line_json", "regex"] },
+        "pattern": { "type": "string", "description": "Required when format=regex." },
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/telemetry_field" }
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "class": { "enum": ["pure_logic", "powered_device", "high_power"] },
+        "notes": { "type": "string", "description": "LLM-readable constraints, e.g. 'no flashing while motor spins'." }
+      }
+    }
+  },
+  "$defs": {
+    "telemetry_field": {
+      "type": "object",
+      "required": ["type", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["uint8", "uint16", "uint32", "int8", "int16", "int32", "float32", "bool", "string"] },
+        "scale": { "type": "number", "default": 1 },
+        "offset": { "type": "number", "default": 0 },
+        "unit": { "type": "string", "description": "Mandatory physical unit (rpm, degC, V, ...). Bare numbers are forbidden." },
+        "range": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    }
+  }
+}
