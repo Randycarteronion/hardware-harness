@@ -107,5 +107,5 @@ default `examples/devices` (anchored to the repo, CWD-independent).
   capability spec loading, MicroPython script deploy (`harness deploy`)
 - Phase 3 ⬜ CAN/GPIO/ADC capabilities, hardware CI, daemon
 - Runbook (验收步骤/接线图/FAQ): docs/后续操作指南.md
-- Lessons register (21 entries): docs/lessons.md
+- Lessons register (25 entries): docs/lessons.md
 - Backlog: docs/backlog/

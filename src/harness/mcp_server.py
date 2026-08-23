@@ -31,8 +31,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from .runtime import build_registry, default_devices_dir, flash_flow, run_test_flow
-from .runner import parse_duration
+from .runtime import build_registry, flash_flow, run_test_flow
 
 mcp = FastMCP("hardware-harness")
 

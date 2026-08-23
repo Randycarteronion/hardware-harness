@@ -17,8 +17,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .registry import DeviceRegistry, RegistryError
-from .runner import TestError, TestRunner, parse_duration
+from .registry import RegistryError
+from .runner import parse_duration
 from .runtime import build_registry
 
 app = typer.Typer(no_args_is_help=True, help="Hardware Harness: a hardware execution runtime for AI agents")
@@ -325,18 +325,16 @@ def run_test(
     runs_dir: Path = typer.Option(Path("runs"), "--runs-dir"),
 ):
     """执行测试剧本，打印 JSON 报告，报告与 artifact 落盘 runs/<run_id>/。"""
-    registry = build_registry(devices_dir)
-    runner = TestRunner(registry, runs_dir)
-    try:
-        script = runner.load_script(test_path)
-        report = runner.run(script, confirm_token=confirm)
-    except (RegistryError, TestError) as e:
-        # 错误必须带 hint 打出来 —— 让 Agent 看完就知道下一步怎么修
-        hint = getattr(e, "hint", "") or ""
-        console.print(f"[red]error:[/red] {e}")
-        if hint:
-            console.print(f"[yellow]hint:[/yellow] {hint}")
+    # 走共享流程（runtime.run_test_flow）：与 MCP server 完全同一套逻辑
+    from .runtime import run_test_flow
+    result = run_test_flow(build_registry(devices_dir), test_path, confirm, runs_dir)
+    if not result["ok"]:
+        # 执行错误（剧本不合法/缺 token）：错误必须带 hint，Agent 读完就会修
+        console.print(f"[red]error:[/red] {result['message']}")
+        if result.get("hint"):
+            console.print(f"[yellow]hint:[/yellow] {result['hint']}")
         raise typer.Exit(2)
+    report = result["report"]
     console.print_json(json.dumps(report, ensure_ascii=False))
     # 退出码即结果：CI 和 Agent 靠它判断，不用解析 JSON
     raise typer.Exit(0 if report["status"] == "PASS" else 1)
